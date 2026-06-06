@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}New Share Request — PrivacyGuard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2><i class="fa fa-plus"></i> New Share Request</h2>
+    <p class="text-muted">Request access to a student's data with their consent.</p>
+  </div>
+  <a href="{{ url_for('share.dashboard') }}" class="btn btn-outline btn-sm">
+    <i class="fa fa-arrow-left"></i> Back
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('share.create_request') }}" class="form">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="student_id"><i class="fa fa-user-graduate"></i> Student</label>
+          <select id="student_id" name="student_id" class="form-input" required>
+            <option value="">— Select a student —</option>
+            {% for s in students %}
+              <option value="{{ s.id }}">{{ s.name }} ({{ s.department or 'N/A' }}, Year {{ s.year or '?' }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="expire_days"><i class="fa fa-clock"></i> Access Expires After</label>
+          <select id="expire_days" name="expire_days" class="form-input">
+            <option value="1">1 day</option>
+            <option value="3">3 days</option>
+            <option value="7" selected>7 days</option>
+            <option value="14">14 days</option>
+            <option value="30">30 days</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="purpose"><i class="fa fa-pen-to-square"></i> Purpose of Request</label>
+        <textarea id="purpose" name="purpose" class="form-input" rows="3"
+                  placeholder="Explain clearly why you need access to this student's data…" required></textarea>
+      </div>
+
+      <div class="form-group">
+        <label><i class="fa fa-database"></i> Data Fields Requested</label>
+        <div class="field-grid">
+          {% set cat = namespace(current='') %}
+          {% for field in fields %}
+            {% if field.category != cat.current %}
+              {% if not loop.first %}</div>{% endif %}
+              {% set cat.current = field.category %}
+              <div class="field-category">
+              <span class="category-label">{{ field.category }}</span>
+            {% endif %}
+            <label class="field-checkbox {% if field.is_sensitive %}sensitive-field{% endif %}">
+              <input type="checkbox" name="field_ids" value="{{ field.id }}" />
+              <span>
+                {{ field.field_name }}
+                {% if field.is_sensitive %}<i class="fa fa-lock" title="Sensitive"></i>{% endif %}
+              </span>
+            </label>
+          {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="form-actions">
+        <a href="{{ url_for('share.dashboard') }}" class="btn btn-outline">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+          <i class="fa fa-paper-plane"></i> Submit Request
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

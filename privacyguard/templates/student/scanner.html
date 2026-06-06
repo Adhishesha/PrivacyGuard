@@ -1,0 +1,483 @@
+{% extends "base.html" %}
+{% block title %}OCR Scanner — PrivacyGuard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2><i class="fa fa-camera"></i> OCR Document Scanner</h2>
+    <p class="text-muted">Upload a document — OCR runs on server. Sensitive fields are encrypted automatically.</p>
+  </div>
+  <a href="{{ url_for('student.download_report') }}" class="btn btn-outline btn-sm"><i class="fa fa-download"></i> Report</a>
+</div>
+
+{% if tess_error %}
+<!-- ── Tesseract not installed — show install guide ── -->
+<div class="tess-install-card mb-2">
+  <div class="tess-install-header">
+    <i class="fa fa-triangle-exclamation" style="color:var(--warning);font-size:1.4rem"></i>
+    <div>
+      <strong style="font-size:1rem">Tesseract OCR Not Found</strong>
+      <p style="color:var(--text2);font-size:.85rem;margin-top:.2rem">Install it once — takes 2 minutes — then OCR will work permanently.</p>
+    </div>
+  </div>
+
+  <div class="install-tabs">
+    <button class="itab active" onclick="showTab('win')"><i class="fa fa-windows"></i> Windows</button>
+    <button class="itab" onclick="showTab('linux')"><i class="fa fa-linux"></i> Linux</button>
+    <button class="itab" onclick="showTab('mac')"><i class="fa fa-apple"></i> Mac</button>
+  </div>
+
+  <div id="tab-win" class="install-content">
+    <p class="install-step-title">Choose any one method:</p>
+    <div class="install-method">
+      <span class="method-badge recommended">Recommended</span>
+      <strong>Download Installer (.exe)</strong>
+      <ol class="install-ol">
+        <li>Go to: <a href="https://github.com/UB-Mannheim/tesseract/wiki" target="_blank">github.com/UB-Mannheim/tesseract/wiki</a></li>
+        <li>Download <code>tesseract-ocr-w64-setup-5.x.x.exe</code></li>
+        <li>Run the installer (keep default path: <code>C:\Program Files\Tesseract-OCR</code>)</li>
+        <li>Restart <code>python app.py</code> — done!</li>
+      </ol>
+    </div>
+    <div class="install-method">
+      <strong>Via PowerShell (winget)</strong>
+      <div class="code-block"><pre>winget install UB-Mannheim.TesseractOCR</pre></div>
+    </div>
+    <div class="install-method">
+      <strong>Via Chocolatey</strong>
+      <div class="code-block"><pre>choco install tesseract</pre></div>
+    </div>
+    <div class="install-note">
+      <i class="fa fa-info-circle"></i>
+      After installing, <strong>close and reopen</strong> your terminal, then run <code>python app.py</code> again.
+    </div>
+  </div>
+
+  <div id="tab-linux" class="install-content" style="display:none">
+    <div class="install-method">
+      <span class="method-badge recommended">Ubuntu / Debian</span>
+      <div class="code-block"><pre>sudo apt-get install tesseract-ocr
+pip install pytesseract pillow</pre></div>
+    </div>
+    <div class="install-method">
+      <strong>Fedora / RHEL</strong>
+      <div class="code-block"><pre>sudo dnf install tesseract</pre></div>
+    </div>
+  </div>
+
+  <div id="tab-mac" class="install-content" style="display:none">
+    <div class="install-method">
+      <span class="method-badge recommended">Homebrew</span>
+      <div class="code-block"><pre>brew install tesseract
+pip install pytesseract pillow</pre></div>
+    </div>
+  </div>
+</div>
+
+<!-- Manual Entry fallback when tesseract not installed -->
+<div class="card mb-2">
+  <div class="card-header">
+    <h3><i class="fa fa-keyboard"></i> Manual Data Entry <span class="pill pill-pending" style="font-size:.75rem">Fallback — while Tesseract installs</span></h3>
+  </div>
+  <div class="card-body">
+    <p class="text-muted" style="font-size:.875rem;margin-bottom:1rem">Enter your details manually below — they will be saved and encrypted the same way as scanned data.</p>
+    <div class="manual-grid" id="manualGrid">
+      {% for field in [('Name','text','Your full name'),('Email','email','your@email.com'),
+                       ('Phone','text','+91 9876543210'),('Date of Birth','text','DD-MM-YYYY'),
+                       ('Department','text','Computer Science'),('Year','number','2'),
+                       ('Roll Number','text','CS2021001'),('Address','text','Your address'),
+                       ('College','text','College name'),('Father Name','text',"Father's name")] %}
+      <div class="form-group">
+        <label>{{ field[0] }}</label>
+        <input type="{{ field[1] }}" class="form-input manual-field"
+               data-field="{{ field[0] }}" placeholder="{{ field[2] }}" />
+      </div>
+      {% endfor %}
+    </div>
+    <div class="form-group mt-2" style="max-width:200px">
+      <label>Document Type</label>
+      <select id="manualScanType" class="form-input">
+        <option value="id_card">🪪 ID Card</option>
+        <option value="transcript">📄 Transcript</option>
+        <option value="admission">📋 Admission Letter</option>
+        <option value="other">📁 Other</option>
+      </select>
+    </div>
+    <div class="flex-row gap-1 mt-2">
+      <button class="btn btn-primary" onclick="saveManual()"><i class="fa fa-save"></i> Save &amp; Apply to Profile</button>
+      <button class="btn btn-outline" onclick="clearManual()"><i class="fa fa-rotate-left"></i> Clear</button>
+    </div>
+    <div id="manualStatus" style="margin-top:.75rem"></div>
+  </div>
+</div>
+
+{% else %}
+<!-- ── Tesseract OK — show scanner ── -->
+<div class="info-bar mb-2">
+  <div class="info-step"><span class="info-num">1</span><span>Upload document image</span></div>
+  <i class="fa fa-arrow-right info-arrow"></i>
+  <div class="info-step"><span class="info-num">2</span><span>Server runs Tesseract OCR</span></div>
+  <i class="fa fa-arrow-right info-arrow"></i>
+  <div class="info-step"><span class="info-num">3</span><span><i class="fa fa-lock" style="color:var(--accent2)"></i> Sensitive fields encrypted</span></div>
+  <i class="fa fa-arrow-right info-arrow"></i>
+  <div class="info-step"><span class="info-num">4</span><span>Apply to profile</span></div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-header">
+    <h3><i class="fa fa-file-arrow-up"></i> Upload Document</h3>
+    <select id="scanType" class="form-input" style="width:auto;padding:.3rem .75rem;font-size:.82rem;">
+      <option value="id_card">🪪 ID Card</option>
+      <option value="transcript">📄 Transcript / Marksheet</option>
+      <option value="admission">📋 Admission Letter</option>
+      <option value="other">📁 Other Document</option>
+    </select>
+  </div>
+  <div class="card-body">
+    <div class="drop-zone" id="dropZone">
+      <i class="fa fa-cloud-arrow-up drop-icon"></i>
+      <p>Drag &amp; drop image here</p>
+      <p class="text-muted" style="font-size:.82rem;">or</p>
+      <label class="btn btn-primary" style="cursor:pointer;">
+        <i class="fa fa-folder-open"></i> Browse File
+        <input type="file" id="fileInput" accept="image/*" style="display:none" />
+      </label>
+      <p class="text-muted mt-1" style="font-size:.78rem;">Supports JPG, PNG, WEBP, BMP, GIF</p>
+    </div>
+
+    <div id="progressWrap" style="display:none;margin-top:1rem;">
+      <div class="ocr-progress-label">
+        <span id="progressLabel"><i class="fa fa-spinner fa-spin"></i> Uploading…</span>
+        <span id="progressPct"></span>
+      </div>
+      <div class="ocr-progress-bar"><div class="ocr-progress-fill" id="progressFill" style="width:0%"></div></div>
+    </div>
+
+    <div id="scanResult" style="display:none;margin-top:1.25rem;">
+      <div class="scan-layout">
+        <div class="scan-preview-box">
+          <p class="field-label mb-1">Preview</p>
+          <img id="previewImg" src="" alt="Preview" class="scan-img" />
+        </div>
+        <div class="scan-fields-box">
+          <div class="scan-status" id="scanStatus"></div>
+          <div id="rawTextBox" style="display:none;" class="mb-2">
+            <p class="field-label mb-1">Raw OCR Text
+              <button class="btn btn-sm btn-outline" onclick="toggleRaw()" style="font-size:.72rem;padding:.15rem .5rem;">show/hide</button>
+            </p>
+            <pre id="rawText" style="display:none;background:var(--bg3);padding:.75rem;border-radius:8px;font-size:.75rem;font-family:var(--mono);white-space:pre-wrap;max-height:200px;overflow-y:auto;color:var(--text2);border:1px solid var(--border);"></pre>
+          </div>
+          <div id="extractedFields"></div>
+          <div id="scanActions" style="display:none;" class="mt-2 flex-row gap-1">
+            <button class="btn btn-success" id="applyBtn"><i class="fa fa-check"></i> Apply to Profile</button>
+            <button class="btn btn-outline" onclick="resetScanner()"><i class="fa fa-rotate-left"></i> Scan Another</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-header"><h3><i class="fa fa-lightbulb"></i> Tips for Best Results</h3></div>
+  <div class="card-body" style="padding:.85rem 1.25rem;">
+    <div class="tips-grid">
+      <div class="tip"><i class="fa fa-sun" style="color:var(--warning)"></i> Good lighting, no shadows</div>
+      <div class="tip"><i class="fa fa-camera" style="color:var(--accent)"></i> Hold steady, document flat</div>
+      <div class="tip"><i class="fa fa-expand" style="color:var(--success)"></i> Fill frame with document</div>
+      <div class="tip"><i class="fa fa-font" style="color:var(--info)"></i> Printed text works best</div>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<div class="encrypt-legend mb-2">
+  <i class="fa fa-info-circle" style="color:var(--accent)"></i>
+  Sensitive fields (Phone, Address, DOB, Aadhaar…) are stored
+  <span class="pill" style="background:rgba(124,92,252,.15);color:var(--accent2);font-size:.75rem"><i class="fa fa-lock"></i> encrypted</span>.
+  Admin can only view them after your explicit request.
+</div>
+
+<!-- Recent Scans -->
+<div class="card">
+  <div class="card-header">
+    <h3><i class="fa fa-clock-rotate-left"></i> Recent Scans</h3>
+    <span class="badge-count">{{ scans|length }}</span>
+  </div>
+  <div class="card-body" style="padding:0">
+    {% if scans %}
+    <table class="table">
+      <thead><tr><th>Document</th><th>Type</th><th>Public</th><th>Encrypted</th><th>Scanned</th><th>Actions</th></tr></thead>
+      <tbody>
+        {% for s in scans %}
+        {% set plain  = s.get_plain() %}
+        {% set secret = s.get_secret() %}
+        <tr>
+          <td><i class="fa fa-file-image text-muted"></i> {{ s.filename[:30] }}{% if s.filename|length > 30 %}…{% endif %}</td>
+          <td><span class="pill pill-{{ s.scan_type }}">{{ s.scan_type.replace('_',' ').title() }}</span></td>
+          <td><span class="text-muted" style="font-size:.82rem;">{{ plain|length }}</span></td>
+          <td>{% if secret|length %}<span class="pill" style="background:rgba(124,92,252,.15);color:var(--accent2);font-size:.76rem"><i class="fa fa-lock"></i> {{ secret|length }}</span>{% else %}<span class="text-muted">—</span>{% endif %}</td>
+          <td class="text-muted" style="font-size:.82rem;">{{ s.scanned_at.strftime('%d %b %Y, %H:%M') }}</td>
+          <td>
+            <div class="flex-row gap-1">
+              <button class="btn btn-sm btn-outline" onclick="toggleDetail({{ loop.index0 }})"><i class="fa fa-eye"></i></button>
+              <a href="{{ url_for('student.scanner_apply', scan_id=s.id) }}" class="btn btn-sm btn-primary"><i class="fa fa-check"></i> Apply</a>
+              <button class="btn btn-sm btn-outline" style="color:var(--accent2);border-color:var(--accent2)"
+                      title="Request admin to view encrypted fields"
+                      onclick="openAdminReq({{ s.id }}, '{{ s.filename[:28]|replace("'","") }}')">
+                <i class="fa fa-user-shield"></i>
+              </button>
+              <form method="POST" action="{{ url_for('student.scanner_delete', scan_id=s.id) }}"
+                    onsubmit="return confirm('Delete this scan?')" style="margin:0">
+                <button class="btn btn-sm btn-danger" type="submit"><i class="fa fa-trash"></i></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        <tr id="detail-{{ loop.index0 }}" style="display:none" class="detail-row">
+          <td colspan="6">
+            <div class="scan-detail-grid">
+              <div>
+                <p class="field-label mb-1"><i class="fa fa-eye"></i> Public Fields</p>
+                <div class="extracted-table">
+                  {% for k,v in plain.items() %}<div class="ext-row"><span class="ext-key">{{ k }}</span><span class="ext-val">{{ v }}</span></div>{% else %}<p class="text-muted" style="padding:.5rem;font-size:.82rem">None</p>{% endfor %}
+                </div>
+              </div>
+              <div>
+                <p class="field-label mb-1"><i class="fa fa-lock" style="color:var(--accent2)"></i> Encrypted Fields</p>
+                <div class="extracted-table">
+                  {% for k in secret.keys() %}<div class="ext-row ext-row-sensitive"><span class="ext-key">{{ k }}</span><span class="ext-val" style="filter:blur(5px);user-select:none">████████████</span></div>{% else %}<p class="text-muted" style="padding:.5rem;font-size:.82rem">None</p>{% endfor %}
+                </div>
+              </div>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><i class="fa fa-camera fa-2x text-muted"></i><p class="text-muted mt-1">No scans yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Admin Request Modal -->
+<div id="adminReqModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:500;align-items:center;justify-content:center;">
+  <div class="modal-box">
+    <h3 style="margin-bottom:.75rem;"><i class="fa fa-user-shield" style="color:var(--accent2)"></i> Request Admin Access</h3>
+    <p class="text-muted" style="font-size:.875rem;margin-bottom:1rem;">Scan: <strong id="modalFilename"></strong></p>
+    <form id="adminReqForm" method="POST">
+      <div class="form-group mb-2">
+        <label>Reason</label>
+        <textarea name="purpose" class="form-input" rows="2" placeholder="e.g. Verify address for hostel…" required></textarea>
+      </div>
+      <div class="flex-row gap-1" style="justify-content:flex-end">
+        <button type="button" class="btn btn-outline" onclick="closeAdminReq()">Cancel</button>
+        <button type="submit" class="btn btn-primary"><i class="fa fa-paper-plane"></i> Send</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+// ── Install tabs ──────────────────────────────────────────────────────────────
+function showTab(id) {
+  document.querySelectorAll('.install-content').forEach(el => el.style.display = 'none');
+  document.querySelectorAll('.itab').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById('tab-' + id);
+  if (el) el.style.display = '';
+  event.target.classList.add('active');
+}
+
+// ── Manual entry ──────────────────────────────────────────────────────────────
+async function saveManual() {
+  const extracted = {};
+  document.querySelectorAll('.manual-field').forEach(inp => {
+    if (inp.value.trim()) extracted[inp.dataset.field] = inp.value.trim();
+  });
+  if (!Object.keys(extracted).length) {
+    document.getElementById('manualStatus').innerHTML =
+      '<span style="color:var(--warning)"><i class="fa fa-triangle-exclamation"></i> Please fill at least one field.</span>';
+    return;
+  }
+  document.getElementById('manualStatus').innerHTML =
+    '<i class="fa fa-spinner fa-spin"></i> Saving…';
+  try {
+    const res  = await fetch('/student/scanner/manual', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ extracted, scan_type: document.getElementById('manualScanType').value })
+    });
+    const json = await res.json();
+    if (json.scan_id) {
+      window.location.href = '/student/scanner/apply/' + json.scan_id;
+    } else {
+      document.getElementById('manualStatus').innerHTML =
+        '<span style="color:var(--danger)"><i class="fa fa-circle-xmark"></i> ' + (json.error||'Error') + '</span>';
+    }
+  } catch(e) {
+    document.getElementById('manualStatus').innerHTML =
+      '<span style="color:var(--danger)"><i class="fa fa-circle-xmark"></i> ' + e.message + '</span>';
+  }
+}
+function clearManual() {
+  document.querySelectorAll('.manual-field').forEach(inp => inp.value = '');
+  document.getElementById('manualStatus').innerHTML = '';
+}
+
+// ── Scan history ──────────────────────────────────────────────────────────────
+const openRows = {};
+function toggleDetail(idx) {
+  const row = document.getElementById('detail-' + idx);
+  if (!row) return;
+  openRows[idx] = !openRows[idx];
+  row.style.display = openRows[idx] ? '' : 'none';
+}
+function toggleRaw() {
+  const el = document.getElementById('rawText');
+  el.style.display = el.style.display === 'none' ? '' : 'none';
+}
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function setStatus(html) { document.getElementById('scanStatus').innerHTML = html; }
+
+// ── Admin modal ───────────────────────────────────────────────────────────────
+function openAdminReq(scanId, filename) {
+  document.getElementById('modalFilename').textContent = filename;
+  document.getElementById('adminReqForm').action = '/student/scanner/request_admin/' + scanId;
+  document.getElementById('adminReqModal').style.display = 'flex';
+}
+function closeAdminReq() { document.getElementById('adminReqModal').style.display = 'none'; }
+document.getElementById('adminReqModal').addEventListener('click', function(e) {
+  if (e.target === this) closeAdminReq();
+});
+
+// ── File upload & OCR ─────────────────────────────────────────────────────────
+const dropZone  = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+if (dropZone) {
+  dropZone.addEventListener('dragover',  e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+}
+if (fileInput) fileInput.addEventListener('change', () => { if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+let currentScanId = null;
+
+async function handleFile(file) {
+  document.getElementById('previewImg').src = URL.createObjectURL(file);
+  document.getElementById('scanResult').style.display = '';
+  document.getElementById('rawTextBox').style.display = 'none';
+  document.getElementById('extractedFields').innerHTML = '';
+  document.getElementById('scanActions').style.display = 'none';
+  document.getElementById('progressWrap').style.display = '';
+  currentScanId = null;
+  setBar(5, 'Uploading image to server…');
+
+  try {
+    const fd = new FormData();
+    fd.append('image', file);
+    fd.append('scan_type', document.getElementById('scanType').value);
+
+    const result = await uploadXHR(fd);
+    document.getElementById('progressWrap').style.display = 'none';
+
+    if (result.install_needed) {
+      setStatus(`<i class="fa fa-triangle-exclamation" style="color:var(--warning)"></i> Tesseract not found. Please install it (see instructions above) then refresh.`);
+      return;
+    }
+    if (result.error) {
+      setStatus(`<i class="fa fa-circle-xmark" style="color:var(--danger)"></i> ${esc(result.error)}`);
+      return;
+    }
+    if (result.warning) {
+      setStatus(`<i class="fa fa-triangle-exclamation" style="color:var(--warning)"></i> ${esc(result.warning)}`);
+      document.getElementById('scanActions').style.display = '';
+      document.getElementById('applyBtn').style.display = 'none';
+      return;
+    }
+
+    if (result.raw_text) {
+      document.getElementById('rawText').textContent = result.raw_text;
+      document.getElementById('rawTextBox').style.display = '';
+    }
+    currentScanId = result.scan_id;
+    renderExtracted(result.extracted, result.plain_count, result.secret_count);
+
+  } catch(err) {
+    document.getElementById('progressWrap').style.display = 'none';
+    setStatus(`<i class="fa fa-circle-xmark" style="color:var(--danger)"></i> ${esc(err.message)}`);
+  }
+}
+
+function uploadXHR(formData) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/student/scanner/ocr');
+    xhr.upload.onprogress = e => {
+      if (e.lengthComputable) setBar(Math.round(e.loaded / e.total * 60), 'Uploading…');
+    };
+    xhr.onload = () => {
+      setBar(85, 'Running OCR…');
+      setTimeout(() => {
+        setBar(100, 'Done!');
+        try { resolve(JSON.parse(xhr.responseText)); }
+        catch(e) { reject(new Error('Bad server response')); }
+      }, 500);
+    };
+    xhr.onerror = () => reject(new Error('Network error'));
+    xhr.send(formData);
+  });
+}
+
+function setBar(pct, label) {
+  const pf = document.getElementById('progressFill');
+  const pl = document.getElementById('progressLabel');
+  const pp = document.getElementById('progressPct');
+  if (!pf) return;
+  pf.style.width = pct + '%';
+  pp.textContent = pct + '%';
+  pl.innerHTML   = (pct < 100 ? '<i class="fa fa-spinner fa-spin"></i> ' : '<i class="fa fa-check" style="color:var(--success)"></i> ') + label;
+}
+
+const SENSITIVE = ['phone','mobile','address','dob','date of birth','birth date',
+                   'father','mother','guardian','aadhaar','pan','passport','blood','roll number','student id'];
+function isSensitive(k) { return SENSITIVE.some(s => k.toLowerCase().includes(s)); }
+
+function renderExtracted(fields, plainCount, secretCount) {
+  const total = Object.keys(fields).length;
+  if (!total) {
+    setStatus('<i class="fa fa-triangle-exclamation" style="color:var(--warning)"></i> No structured fields parsed. Check raw OCR text — you can scroll it above.');
+    return;
+  }
+  setStatus(
+    `<i class="fa fa-circle-check" style="color:var(--success)"></i> ` +
+    `<strong>${total} field${total!==1?'s':''} extracted</strong>` +
+    (secretCount ? ` — <span style="color:var(--accent2)"><i class="fa fa-lock"></i> ${secretCount} encrypted on server</span>` : '') +
+    ` — <span class="text-muted">click to edit</span>`
+  );
+  document.getElementById('extractedFields').innerHTML =
+    '<div class="extracted-table mt-1">' +
+    Object.entries(fields).map(([k,v]) => {
+      const enc = isSensitive(k);
+      return `<div class="ext-row ${enc?'ext-row-sensitive':''}">
+        <span class="ext-key">${esc(k)} ${enc?'<i class="fa fa-lock" style="color:var(--accent2);font-size:.7rem"></i>':''}</span>
+        <span class="ext-val" contenteditable="true" data-field="${esc(k)}">${esc(String(v))}</span>
+      </div>`;
+    }).join('') + '</div>';
+  document.getElementById('applyBtn').onclick = () => {
+    if (currentScanId) window.location.href = '/student/scanner/apply/' + currentScanId;
+  };
+  document.getElementById('scanActions').style.display = '';
+}
+
+function resetScanner() {
+  document.getElementById('scanResult').style.display = 'none';
+  document.getElementById('progressWrap').style.display = 'none';
+  if (fileInput) fileInput.value = '';
+  currentScanId = null;
+}
+</script>
+{% endblock %}

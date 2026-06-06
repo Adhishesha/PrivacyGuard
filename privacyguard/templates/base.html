@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}PrivacyGuard{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+<body>
+
+{% if session.user_id %}
+<nav class="navbar">
+  <div class="nav-brand">
+    <i class="fa-solid fa-shield-halved"></i><span>PrivacyGuard</span>
+  </div>
+  <ul class="nav-links">
+    {% if session.role == 'admin' %}
+      <li><a href="{{ url_for('admin.dashboard') }}"><i class="fa fa-gauge"></i> Dashboard</a></li>
+      <li><a href="{{ url_for('admin.users') }}"><i class="fa fa-users"></i> Users</a></li>
+      <li><a href="{{ url_for('admin.students') }}"><i class="fa fa-user-graduate"></i> Students</a></li>
+      <li><a href="{{ url_for('admin.requests') }}"><i class="fa fa-file-lines"></i> Requests</a></li>
+      <li><a href="{{ url_for('admin.scan_requests') }}"><i class="fa fa-lock-open"></i> Scan Requests</a></li>
+      <li><a href="{{ url_for('admin.audit') }}"><i class="fa fa-scroll"></i> Audit</a></li>
+    {% elif session.role == 'student' %}
+      <li><a href="{{ url_for('student.dashboard') }}"><i class="fa fa-gauge"></i> Dashboard</a></li>
+      <li><a href="{{ url_for('student.profile') }}"><i class="fa fa-user"></i> Profile</a></li>
+      <li><a href="{{ url_for('student.scanner') }}"><i class="fa fa-camera"></i> OCR Scanner</a></li>
+      <li><a href="{{ url_for('student.download_report') }}"><i class="fa fa-download"></i> Report</a></li>
+    {% else %}
+      <li><a href="{{ url_for('share.dashboard') }}"><i class="fa fa-gauge"></i> Dashboard</a></li>
+      <li><a href="{{ url_for('share.create_request') }}"><i class="fa fa-plus"></i> New Request</a></li>
+    {% endif %}
+  </ul>
+  <div class="nav-user">
+    <div class="user-switcher" id="userSwitcher">
+      <button class="switcher-btn" onclick="toggleSwitcher()">
+        <span class="badge badge-{{ session.role }}">{{ session.role }}</span>
+        <span class="switcher-name">{{ session.username }}</span>
+        <i class="fa fa-chevron-down switcher-icon" id="switcherIcon"></i>
+      </button>
+      <div class="switcher-dropdown" id="switcherDropdown">
+        <div class="switcher-header">Switch Account</div>
+        <div class="switcher-list" id="switcherList">
+          <div class="switcher-loading"><i class="fa fa-spinner fa-spin"></i> Loading…</div>
+        </div>
+        <div class="switcher-footer">
+          <a href="{{ url_for('auth.register') }}" class="switcher-new"><i class="fa fa-user-plus"></i> Register new account</a>
+          <a href="{{ url_for('auth.logout') }}" class="switcher-logout"><i class="fa fa-right-from-bracket"></i> Logout</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+{% endif %}
+
+<main class="main-content {% if not session.user_id %}centered{% endif %}">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }}">
+          <i class="fa fa-{% if category == 'success' %}check-circle{% elif category == 'danger' %}circle-xmark{% elif category == 'warning' %}triangle-exclamation{% else %}circle-info{% endif %}"></i>
+          {{ message|safe }}
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
+</main>
+
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<script>
+function toggleSwitcher() {
+  const dd   = document.getElementById('switcherDropdown');
+  const icon = document.getElementById('switcherIcon');
+  const open = dd.classList.toggle('open');
+  icon.style.transform = open ? 'rotate(180deg)' : '';
+  if (open) loadAccounts();
+}
+document.addEventListener('click', function(e) {
+  if (!document.getElementById('userSwitcher').contains(e.target)) {
+    document.getElementById('switcherDropdown').classList.remove('open');
+    document.getElementById('switcherIcon').style.transform = '';
+  }
+});
+function loadAccounts() {
+  fetch('/auth/accounts').then(r => r.json()).then(data => {
+    const list = document.getElementById('switcherList');
+    if (!data.accounts || !data.accounts.length) {
+      list.innerHTML = '<div class="switcher-loading">No other accounts</div>'; return;
+    }
+    list.innerHTML = data.accounts.map(a => `
+      <form method="POST" action="/auth/switch" style="margin:0">
+        <input type="hidden" name="user_id" value="${a.id}">
+        <button type="submit" class="switcher-item ${a.current?'current':''}">
+          <span class="s-badge s-badge-${a.role}">${a.role[0].toUpperCase()}</span>
+          <span class="s-name">${a.username}</span>
+          <span class="text-muted" style="font-size:.75rem">${a.role}</span>
+          ${a.current ? '<i class="fa fa-check s-check"></i>' : ''}
+        </button>
+      </form>`).join('');
+  }).catch(() => {
+    document.getElementById('switcherList').innerHTML = '<div class="switcher-loading">Failed to load</div>';
+  });
+}
+// Auto-highlight active nav link
+document.querySelectorAll('.nav-links a').forEach(a => {
+  if (a.getAttribute('href') === window.location.pathname) a.classList.add('active');
+});
+</script>
+</body>
+</html>

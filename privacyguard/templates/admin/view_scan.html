@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}View Scan — Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2><i class="fa fa-eye"></i> Scan Data Review</h2>
+    <p class="text-muted">Student: <strong>{{ sreq.student.name }}</strong> · File: {{ scan.filename }}</p>
+  </div>
+  <a href="{{ url_for('admin.scan_requests') }}" class="btn btn-outline btn-sm"><i class="fa fa-arrow-left"></i> Back</a>
+</div>
+
+<!-- Request info -->
+<div class="card mb-2">
+  <div class="card-header">
+    <h3><i class="fa fa-info-circle"></i> Request Details</h3>
+    <span class="pill pill-{{ sreq.status }}">
+      <i class="fa fa-{% if sreq.status == 'approved' %}check{% elif sreq.status == 'denied' %}xmark{% else %}clock{% endif %}"></i>
+      {{ sreq.status.title() }}
+    </span>
+  </div>
+  <div class="card-body">
+    <div class="profile-grid">
+      <div class="profile-field"><label>Student</label><span>{{ sreq.student.name }}</span></div>
+      <div class="profile-field"><label>Department</label><span>{{ sreq.student.department or '—' }}</span></div>
+      <div class="profile-field"><label>Purpose</label><span>{{ sreq.purpose or '—' }}</span></div>
+      <div class="profile-field"><label>Requested At</label><span>{{ sreq.requested_at.strftime('%d %b %Y, %H:%M') }}</span></div>
+      <div class="profile-field"><label>Document Type</label><span>{{ scan.scan_type.replace('_',' ').title() }}</span></div>
+      <div class="profile-field"><label>Scanned At</label><span>{{ scan.scanned_at.strftime('%d %b %Y, %H:%M') }}</span></div>
+    </div>
+    {% if sreq.status == 'pending' %}
+    <div class="flex-row gap-1 mt-2">
+      <form method="POST" action="{{ url_for('admin.approve_scan_request', sreq_id=sreq.id) }}" style="margin:0">
+        <button type="submit" class="btn btn-success"><i class="fa fa-check"></i> Approve &amp; View Data</button>
+      </form>
+      <form method="POST" action="{{ url_for('admin.deny_scan_request', sreq_id=sreq.id) }}"
+            onsubmit="return confirm('Deny this scan request?')" style="margin:0">
+        <button type="submit" class="btn btn-danger"><i class="fa fa-xmark"></i> Deny</button>
+      </form>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+{% if sreq.status == 'approved' %}
+<!-- Public fields -->
+<div class="card mb-2">
+  <div class="card-header">
+    <h3><i class="fa fa-eye"></i> Public Fields</h3>
+    <span class="badge-count">{{ plain|length }}</span>
+  </div>
+  <div class="card-body" style="padding:0">
+    {% if plain %}
+    <table class="table">
+      <thead><tr><th>Field</th><th>Value</th></tr></thead>
+      <tbody>
+        {% for k,v in plain.items() %}
+        <tr><td><strong>{{ k }}</strong></td><td>{{ v or '—' }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><p class="text-muted">No public fields in this scan.</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Decrypted sensitive fields -->
+<div class="card">
+  <div class="card-header">
+    <h3><i class="fa fa-lock-open" style="color:var(--accent2)"></i> Decrypted Sensitive Fields</h3>
+    <span class="pill" style="background:rgba(124,92,252,.15);color:var(--accent2)">
+      <i class="fa fa-shield-halved"></i> Admin Only
+    </span>
+  </div>
+  <div class="card-body" style="padding:0">
+    {% if secret %}
+    <div class="decrypt-notice">
+      <i class="fa fa-triangle-exclamation" style="color:var(--warning)"></i>
+      These fields were encrypted in the student's dashboard. You are viewing them as admin after student's explicit request.
+    </div>
+    <table class="table">
+      <thead><tr><th>Field</th><th>Decrypted Value</th><th></th></tr></thead>
+      <tbody>
+        {% for k,v in secret.items() %}
+        <tr>
+          <td><strong>{{ k }}</strong></td>
+          <td id="val-{{ loop.index }}" class="blurred" onclick="this.classList.toggle('blurred')">{{ v or '—' }}</td>
+          <td><span class="pill" style="background:rgba(124,92,252,.1);color:var(--accent2);font-size:.72rem"><i class="fa fa-lock-open"></i> decrypted</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <p class="text-muted" style="font-size:.8rem;padding:.75rem 1rem;">
+      <i class="fa fa-eye-slash"></i> Click any value to reveal/hide. This view is logged in the audit trail.
+    </p>
+    {% else %}
+    <div class="empty-state"><p class="text-muted">No encrypted fields in this scan.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% elif sreq.status == 'denied' %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa fa-circle-xmark fa-2x" style="color:var(--danger)"></i>
+      <p class="text-muted mt-1">This request was denied. Scan data is not accessible.</p>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-body">
+    <div class="empty-state">
+      <i class="fa fa-lock fa-2x" style="color:var(--accent2)"></i>
+      <p class="text-muted mt-1">Approve the request above to view decrypted scan data.</p>
+    </div>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

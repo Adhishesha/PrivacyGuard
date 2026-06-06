@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Students — Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h2><i class="fa fa-user-graduate"></i> All Students</h2><p class="text-muted">{{ students|length }} registered student{{ 's' if students|length != 1 }}.</p></div>
+</div>
+<div class="card">
+  <div class="card-body" style="padding:0">
+    {% if students %}
+    <table class="table">
+      <thead><tr><th>Name</th><th>Email</th><th>Department</th><th>Year</th><th>Scans</th><th>Registered</th></tr></thead>
+      <tbody>
+        {% for s in students %}
+        <tr>
+          <td><strong>{{ s.name }}</strong></td>
+          <td>{{ s.email }}</td>
+          <td>{{ s.department or '—' }}</td>
+          <td>{% if s.year %}Year {{ s.year }}{% else %}—{% endif %}</td>
+          <td>{{ s.scan_histories.count() }}</td>
+          <td class="text-muted" style="font-size:.82rem;">{{ s.created_at.strftime('%d %b %Y') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><i class="fa fa-user-graduate fa-2x text-muted"></i><p class="text-muted mt-1">No students registered yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

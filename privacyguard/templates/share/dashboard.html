@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}My Requests — PrivacyGuard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2><i class="fa fa-gauge"></i> My Share Requests</h2>
+    <p class="text-muted">Track all your data access requests.</p>
+  </div>
+  <a href="{{ url_for('share.create_request') }}" class="btn btn-primary btn-sm">
+    <i class="fa fa-plus"></i> New Request
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body" style="padding:0">
+    {% if requests %}
+    <table class="table">
+      <thead>
+        <tr><th>#</th><th>Student</th><th>Purpose</th><th>Fields</th><th>Status</th><th>Requested</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for req in requests %}
+        <tr>
+          <td class="text-muted" style="font-size:.82rem;">{{ req.id }}</td>
+          <td><strong>{{ req.student.name }}</strong></td>
+          <td style="font-size:.85rem;">{{ req.purpose[:45] }}{% if req.purpose|length > 45 %}…{% endif %}</td>
+          <td>
+            {% for f in req.field_names %}
+              <span class="pill pill-field" style="font-size:.72rem;margin:1px">{{ f }}</span>
+            {% endfor %}
+          </td>
+          <td><span class="pill pill-{{ req.status }}">{{ req.status.title() }}</span></td>
+          <td class="text-muted" style="font-size:.82rem;">{{ req.requested_at.strftime('%d %b %Y') }}</td>
+          <td>
+            {% if req.status == 'approved' %}
+              <a href="{{ url_for('share.view_data', request_id=req.id) }}" class="btn btn-sm btn-success">
+                <i class="fa fa-eye"></i> View Data
+              </a>
+            {% else %}
+              <span class="text-muted" style="font-size:.8rem;">—</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <i class="fa fa-inbox fa-2x text-muted"></i>
+      <p class="text-muted mt-1">No requests yet. <a href="{{ url_for('share.create_request') }}">Create one now</a>.</p>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

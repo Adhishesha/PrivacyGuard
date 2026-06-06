@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Scan View Requests — Admin{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2><i class="fa fa-lock-open"></i> Scan View Requests</h2>
+    <p class="text-muted">Students request admin to decrypt and review their encrypted scan data.</p>
+  </div>
+  <a href="{{ url_for('admin.dashboard') }}" class="btn btn-outline btn-sm"><i class="fa fa-arrow-left"></i> Back</a>
+</div>
+
+<div class="card mb-2">
+  <div class="card-header">
+    <h3><i class="fa fa-clock" style="color:var(--warning)"></i> Pending Requests</h3>
+    <span class="badge-count">{{ pending|length }}</span>
+  </div>
+  <div class="card-body" style="padding:0">
+    {% if pending %}
+    <table class="table">
+      <thead><tr><th>Student</th><th>File</th><th>Scan Type</th><th>Purpose</th><th>Requested</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for sr in pending %}
+        <tr>
+          <td><strong>{{ sr.student.name }}</strong><br><span class="text-muted" style="font-size:.8rem">{{ sr.student.department or '' }} {% if sr.student.year %}· Year {{ sr.student.year }}{% endif %}</span></td>
+          <td style="font-size:.85rem;">{{ sr.scan.filename[:32] }}</td>
+          <td><span class="pill pill-{{ sr.scan.scan_type }}">{{ sr.scan.scan_type.replace('_',' ').title() }}</span></td>
+          <td style="font-size:.85rem;">{{ sr.purpose or '—' }}</td>
+          <td class="text-muted" style="font-size:.82rem;">{{ sr.requested_at.strftime('%d %b %Y, %H:%M') }}</td>
+          <td>
+            <a href="{{ url_for('admin.view_scan', sreq_id=sr.id) }}" class="btn btn-sm btn-primary">
+              <i class="fa fa-eye"></i> Review &amp; Decrypt
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><i class="fa fa-circle-check fa-2x" style="color:var(--success)"></i><p class="text-muted mt-1">No pending scan requests.</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header"><h3><i class="fa fa-history"></i> Reviewed Requests</h3></div>
+  <div class="card-body" style="padding:0">
+    {% if reviewed %}
+    <table class="table">
+      <thead><tr><th>Student</th><th>File</th><th>Status</th><th>Reviewed</th></tr></thead>
+      <tbody>
+        {% for sr in reviewed %}
+        <tr>
+          <td>{{ sr.student.name }}</td>
+          <td style="font-size:.85rem;">{{ sr.scan.filename[:35] }}</td>
+          <td><span class="pill pill-{{ sr.status }}"><i class="fa fa-{% if sr.status == 'approved' %}check{% else %}xmark{% endif %}"></i> {{ sr.status.title() }}</span></td>
+          <td class="text-muted" style="font-size:.82rem;">{{ sr.reviewed_at.strftime('%d %b %Y, %H:%M') if sr.reviewed_at else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><p class="text-muted">No reviewed requests yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

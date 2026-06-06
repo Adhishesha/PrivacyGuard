@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Login — PrivacyGuard{% endblock %}
+
+{% block content %}
+<div class="auth-card">
+  <div class="auth-logo">
+    <i class="fa-solid fa-shield-halved fa-3x"></i>
+    <h1>PrivacyGuard</h1>
+    <p>Student Data Privacy Protection</p>
+  </div>
+
+  <form method="POST" action="{{ url_for('auth.login') }}" class="form">
+    <div class="form-group">
+      <label for="username"><i class="fa fa-user"></i> Username</label>
+      <input type="text" id="username" name="username" class="form-input"
+             placeholder="Enter username" required autofocus />
+    </div>
+    <div class="form-group">
+      <label for="password"><i class="fa fa-lock"></i> Password</label>
+      <div class="input-with-icon">
+        <input type="password" id="password" name="password" class="form-input"
+               placeholder="Enter password" required />
+        <button type="button" class="show-pass-btn" onclick="togglePass()">
+          <i class="fa fa-eye" id="passIcon"></i>
+        </button>
+      </div>
+    </div>
+    <button type="submit" class="btn btn-primary btn-full">
+      <i class="fa fa-right-to-bracket"></i> Sign In
+    </button>
+  </form>
+
+  <!-- Quick-login demo tiles -->
+  <div class="demo-accounts">
+    <p class="demo-label">Quick Demo Login</p>
+    <div class="demo-tiles">
+      <button class="demo-tile" onclick="fillLogin('admin','admin123')">
+        <i class="fa fa-user-shield"></i>
+        <span>Admin</span>
+      </button>
+    </div>
+  </div>
+
+  <p class="auth-footer">
+    No account? <a href="{{ url_for('auth.register') }}">Register here</a>
+  </p>
+</div>
+
+<script>
+function fillLogin(u, p) {
+  document.getElementById('username').value = u;
+  document.getElementById('password').value = p;
+}
+function togglePass() {
+  const inp = document.getElementById('password');
+  const icon = document.getElementById('passIcon');
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    icon.className = 'fa fa-eye-slash';
+  } else {
+    inp.type = 'password';
+    icon.className = 'fa fa-eye';
+  }
+}
+</script>
+{% endblock %}

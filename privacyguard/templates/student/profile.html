@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block title %}My Profile — PrivacyGuard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2><i class="fa fa-user"></i> My Profile</h2>
+    <p class="text-muted">Your data stored in this system.</p>
+  </div>
+  <div class="flex-row gap-1">
+    <a href="{{ url_for('student.scanner') }}" class="btn btn-primary btn-sm">
+      <i class="fa fa-camera"></i> OCR Scan
+    </a>
+    <a href="{{ url_for('student.download_report') }}" class="btn btn-outline btn-sm">
+      <i class="fa fa-download"></i> Download .txt Report
+    </a>
+  </div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-header">
+    <h3><i class="fa fa-id-card"></i> Personal Information</h3>
+    <span class="profile-completeness">
+      {% set filled = [student.name, student.email, student.phone, student.address, student.dob, student.department, student.year] | select | list | length %}
+      <span class="pill pill-{{ 'approved' if filled >= 6 else 'pending' }}">
+        {{ filled }}/7 fields filled
+      </span>
+    </span>
+  </div>
+  <div class="card-body">
+    <div class="profile-grid">
+      <div class="profile-field">
+        <label>Full Name</label>
+        <span>{{ student.name or '—' }}</span>
+      </div>
+      <div class="profile-field">
+        <label>Email</label>
+        <span>{{ student.email or '—' }}</span>
+      </div>
+      <div class="profile-field sensitive">
+        <label><i class="fa fa-lock"></i> Phone</label>
+        <span class="blurred" onclick="this.classList.toggle('blurred')">{{ student.phone or '—' }}</span>
+      </div>
+      <div class="profile-field sensitive">
+        <label><i class="fa fa-lock"></i> Address</label>
+        <span class="blurred" onclick="this.classList.toggle('blurred')">{{ student.address or '—' }}</span>
+      </div>
+      <div class="profile-field sensitive">
+        <label><i class="fa fa-lock"></i> Date of Birth</label>
+        <span class="blurred" onclick="this.classList.toggle('blurred')">{{ student.dob or '—' }}</span>
+      </div>
+      <div class="profile-field">
+        <label>Department</label>
+        <span>{{ student.department or '—' }}</span>
+      </div>
+      <div class="profile-field">
+        <label>Year</label>
+        <span>{% if student.year %}Year {{ student.year }}{% else %}—{% endif %}</span>
+      </div>
+    </div>
+    <p class="text-muted mt-2" style="font-size:.82rem;">
+      <i class="fa fa-eye-slash"></i> Sensitive fields are hidden — click to reveal.
+    </p>
+  </div>
+</div>
+
+<!-- Quick actions -->
+<div class="card">
+  <div class="card-header">
+    <h3><i class="fa fa-bolt"></i> Quick Actions</h3>
+  </div>
+  <div class="card-body">
+    <div class="quick-actions">
+      <a href="{{ url_for('student.scanner') }}" class="quick-action-btn">
+        <i class="fa fa-camera fa-lg"></i>
+        <span>Scan Document</span>
+        <small>Auto-fill profile via OCR</small>
+      </a>
+      <a href="{{ url_for('student.download_report') }}" class="quick-action-btn">
+        <i class="fa fa-file-lines fa-lg"></i>
+        <span>Download Report</span>
+        <small>Export all data as .txt</small>
+      </a>
+      <a href="{{ url_for('student.dashboard') }}" class="quick-action-btn">
+        <i class="fa fa-bell fa-lg"></i>
+        <span>Check Requests</span>
+        <small>View pending consents</small>
+      </a>
+    </div>
+  </div>
+</div>
+{% endblock %}

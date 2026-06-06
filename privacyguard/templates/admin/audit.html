@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Audit Log — Admin — PrivacyGuard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2><i class="fa fa-scroll"></i> Full Audit Log</h2>
+    <p class="text-muted">Complete record of all access and consent decisions.</p>
+  </div>
+</div>
+
+<div class="card mb-2">
+  <div class="card-header">
+    <h3><i class="fa fa-eye"></i> Access Log</h3>
+    <span class="badge-count">{{ access_logs|length }}</span>
+  </div>
+  <div class="card-body" style="padding:0">
+    {% if access_logs %}
+    <table class="table">
+      <thead><tr><th>Request #</th><th>Accessed By</th><th>Action</th><th>Time</th></tr></thead>
+      <tbody>
+        {% for log in access_logs %}
+        <tr>
+          <td>#{{ log.request_id }}</td>
+          <td>{{ log.accessed_by_user.username }}</td>
+          <td>{{ log.action }}</td>
+          <td class="text-muted" style="font-size:.82rem;">{{ log.accessed_at.strftime('%d %b %Y, %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><p class="text-muted">No access logs yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3><i class="fa fa-check-double"></i> Consent Log</h3>
+    <span class="badge-count">{{ consent_logs|length }}</span>
+  </div>
+  <div class="card-body" style="padding:0">
+    {% if consent_logs %}
+    <table class="table">
+      <thead><tr><th>Student</th><th>Request #</th><th>Decision</th><th>IP Address</th><th>Time</th></tr></thead>
+      <tbody>
+        {% for log in consent_logs %}
+        <tr>
+          <td>{{ log.student.name }}</td>
+          <td>#{{ log.request_id }}</td>
+          <td><span class="pill pill-{{ log.decision }}"><i class="fa fa-{% if log.decision == 'approved' %}check{% else %}xmark{% endif %}"></i> {{ log.decision.title() }}</span></td>
+          <td class="text-muted" style="font-size:.82rem;">{{ log.ip_address or '—' }}</td>
+          <td class="text-muted" style="font-size:.82rem;">{{ log.decided_at.strftime('%d %b %Y, %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><p class="text-muted">No consent decisions yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}View Shared Data — PrivacyGuard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2><i class="fa fa-eye"></i> Approved Data — {{ student.name }}</h2>
+    <p class="text-muted">
+      Request #{{ share_req.id }} &nbsp;·&nbsp;
+      Expires: {{ share_req.expires_at.strftime('%d %b %Y, %H:%M') if share_req.expires_at else 'Never' }}
+    </p>
+  </div>
+  <a href="{{ url_for('share.dashboard') }}" class="btn btn-outline btn-sm">
+    <i class="fa fa-arrow-left"></i> Back
+  </a>
+</div>
+
+<div class="card mb-2">
+  <div class="card-header">
+    <h3><i class="fa fa-circle-info"></i> Request Details</h3>
+    <span class="pill pill-approved"><i class="fa fa-lock-open"></i> Access Granted</span>
+  </div>
+  <div class="card-body">
+    <p style="font-size:.9rem;margin-bottom:.6rem;"><strong>Purpose:</strong> {{ share_req.purpose }}</p>
+    <p style="font-size:.875rem;"><strong>Approved fields:</strong>
+      {% for f in share_req.field_names %}
+        <span class="pill pill-field">{{ f }}</span>
+      {% endfor %}
+    </p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-header">
+    <h3><i class="fa fa-table"></i> Student Data</h3>
+  </div>
+  <div class="card-body" style="padding:0">
+    <table class="table">
+      <thead><tr><th>Field</th><th>Value</th></tr></thead>
+      <tbody>
+        {% for key, value in data.items() %}
+        <tr>
+          <td><strong>{{ key }}</strong></td>
+          <td>{{ value or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

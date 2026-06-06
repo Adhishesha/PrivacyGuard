@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Users — Admin — PrivacyGuard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2><i class="fa fa-users"></i> All Users</h2>
+    <p class="text-muted">{{ users|length }} registered account{{ 's' if users|length != 1 }}.</p>
+  </div>
+  <a href="{{ url_for('auth.register') }}" class="btn btn-primary btn-sm">
+    <i class="fa fa-user-plus"></i> Add User
+  </a>
+</div>
+
+<div class="card">
+  <div class="card-body" style="padding:0">
+    <table class="table">
+      <thead>
+        <tr><th>#</th><th>Username</th><th>Role</th><th>Linked Student</th><th>Registered</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for user in users %}
+        <tr>
+          <td class="text-muted" style="font-size:.82rem;">{{ user.id }}</td>
+          <td><strong>{{ user.username }}</strong></td>
+          <td><span class="badge badge-{{ user.role }}">{{ user.role }}</span></td>
+          <td>{{ user.student.name if user.student else '—' }}</td>
+          <td class="text-muted" style="font-size:.82rem;">{{ user.created_at.strftime('%d %b %Y') }}</td>
+          <td>
+            {% if user.role != 'admin' %}
+            <form method="POST" action="{{ url_for('admin.delete_user', user_id=user.id) }}"
+                  onsubmit="return confirm('Delete user {{ user.username }}?')" style="margin:0">
+              <button type="submit" class="btn btn-sm btn-danger"><i class="fa fa-trash"></i></button>
+            </form>
+            {% else %}
+            <span class="text-muted" style="font-size:.8rem;">Protected</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

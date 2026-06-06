@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}All Requests — Admin — PrivacyGuard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2><i class="fa fa-file-lines"></i> All Share Requests</h2>
+    <p class="text-muted">{{ requests|length }} total request{{ 's' if requests|length != 1 }}.</p>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body" style="padding:0">
+    {% if requests %}
+    <table class="table">
+      <thead>
+        <tr><th>#</th><th>Requester</th><th>Student</th><th>Purpose</th><th>Fields</th><th>Status</th><th>Date</th></tr>
+      </thead>
+      <tbody>
+        {% for req in requests %}
+        <tr>
+          <td class="text-muted" style="font-size:.82rem;">{{ req.id }}</td>
+          <td>{{ req.requester.username }}</td>
+          <td>{{ req.student.name }}</td>
+          <td style="font-size:.85rem;">{{ req.purpose[:45] }}{% if req.purpose|length > 45 %}…{% endif %}</td>
+          <td>
+            {% for f in req.field_names %}
+              <span class="pill pill-field" style="font-size:.72rem;margin:1px">{{ f }}</span>
+            {% endfor %}
+          </td>
+          <td>
+            <span class="pill pill-{{ req.status }}">{{ req.status.title() }}</span>
+          </td>
+          <td class="text-muted" style="font-size:.82rem;">{{ req.requested_at.strftime('%d %b %Y') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><i class="fa fa-inbox fa-2x text-muted"></i><p class="text-muted mt-1">No requests yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

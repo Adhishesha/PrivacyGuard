@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — PrivacyGuard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2><i class="fa fa-shield-halved"></i> Welcome, {{ student.name }}</h2>
+    <p class="text-muted">Your privacy dashboard — review requests and manage your data.</p>
+  </div>
+  <div class="flex-row gap-1">
+    <a href="{{ url_for('student.scanner') }}" class="btn btn-primary btn-sm"><i class="fa fa-camera"></i> Scan Document</a>
+    <a href="{{ url_for('student.download_report') }}" class="btn btn-outline btn-sm"><i class="fa fa-download"></i> Report</a>
+  </div>
+</div>
+
+<div class="stats-row mb-2">
+  <div class="stat-card">
+    <i class="fa fa-bell stat-icon" style="color:var(--warning)"></i>
+    <div><div class="stat-val">{{ pending|length }}</div><div class="stat-label">Pending Requests</div></div>
+  </div>
+  <div class="stat-card">
+    <i class="fa fa-camera stat-icon" style="color:var(--success)"></i>
+    <div><div class="stat-val">{{ scans|length }}</div><div class="stat-label">Recent Scans</div></div>
+  </div>
+  <div class="stat-card">
+    <i class="fa fa-lock stat-icon" style="color:var(--accent2)"></i>
+    <div><div class="stat-val">{{ scan_reqs|length }}</div><div class="stat-label">Admin Requests</div></div>
+  </div>
+  <div class="stat-card">
+    <i class="fa fa-history stat-icon" style="color:var(--accent)"></i>
+    <div><div class="stat-val">{{ history|length }}</div><div class="stat-label">Consent Decisions</div></div>
+  </div>
+</div>
+
+<!-- Pending Consent Requests -->
+<div class="card mb-2">
+  <div class="card-header">
+    <h3><i class="fa fa-bell"></i> Pending Consent Requests</h3>
+    {% if pending %}<span class="badge-count">{{ pending|length }}</span>{% endif %}
+  </div>
+  <div class="card-body">
+    {% if pending %}
+      {% for req in pending %}
+      <div class="request-card">
+        <div class="request-info">
+          <strong>{{ req.requester.username }}</strong>
+          <span class="text-muted"> wants access to:</span>
+          {% for fn in req.field_names %}<span class="pill pill-field">{{ fn }}</span>{% endfor %}
+          <p class="text-muted mt-1" style="font-size:.85rem;">Purpose: {{ req.purpose }}</p>
+        </div>
+        <div class="request-actions">
+          <a href="{{ url_for('student.consent', request_id=req.id, decision='approved') }}" class="btn btn-success btn-sm"><i class="fa fa-check"></i> Approve</a>
+          <a href="{{ url_for('student.consent', request_id=req.id, decision='denied') }}" class="btn btn-danger btn-sm"><i class="fa fa-xmark"></i> Deny</a>
+        </div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <div class="empty-state"><i class="fa fa-circle-check fa-2x" style="color:var(--success)"></i><p class="text-muted mt-1">No pending requests. All clear!</p></div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Admin Scan View Requests -->
+{% if scan_reqs %}
+<div class="card mb-2">
+  <div class="card-header">
+    <h3><i class="fa fa-user-shield"></i> Admin Scan View Requests</h3>
+    <span class="badge-count">{{ scan_reqs|length }}</span>
+  </div>
+  <div class="card-body" style="padding:0">
+    <table class="table">
+      <thead><tr><th>Scan File</th><th>Purpose</th><th>Status</th><th>Requested</th></tr></thead>
+      <tbody>
+        {% for sr in scan_reqs %}
+        <tr>
+          <td><i class="fa fa-file-image text-muted"></i> {{ sr.scan.filename[:35] }}</td>
+          <td style="font-size:.85rem;">{{ sr.purpose or '—' }}</td>
+          <td>
+            <span class="pill pill-{{ sr.status }}">
+              <i class="fa fa-{% if sr.status == 'approved' %}check{% elif sr.status == 'denied' %}xmark{% else %}clock{% endif %}"></i>
+              {{ sr.status.title() }}
+            </span>
+          </td>
+          <td class="text-muted" style="font-size:.82rem;">{{ sr.requested_at.strftime('%d %b, %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Recent Scans -->
+{% if scans %}
+<div class="card mb-2">
+  <div class="card-header">
+    <h3><i class="fa fa-camera"></i> Recent OCR Scans</h3>
+    <a href="{{ url_for('student.scanner') }}" class="btn btn-sm btn-outline">View All</a>
+  </div>
+  <div class="card-body" style="padding:0">
+    <table class="table">
+      <thead><tr><th>File</th><th>Type</th><th>Encrypted Fields</th><th>Scanned</th><th></th></tr></thead>
+      <tbody>
+        {% for s in scans %}
+        <tr>
+          <td>{{ s.filename[:38] }}</td>
+          <td><span class="pill pill-{{ s.scan_type }}">{{ s.scan_type.replace('_',' ').title() }}</span></td>
+          <td>
+            {% set secret_count = s.get_secret()|length %}
+            {% if secret_count > 0 %}
+              <span class="pill" style="background:rgba(124,92,252,.15);color:var(--accent2)">
+                <i class="fa fa-lock"></i> {{ secret_count }} encrypted
+              </span>
+            {% else %}
+              <span class="text-muted" style="font-size:.82rem;">None</span>
+            {% endif %}
+          </td>
+          <td class="text-muted" style="font-size:.82rem;">{{ s.scanned_at.strftime('%d %b, %H:%M') }}</td>
+          <td>
+            <a href="{{ url_for('student.scanner_apply', scan_id=s.id) }}" class="btn btn-sm btn-primary">
+              <i class="fa fa-check"></i> Apply
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Consent History -->
+<div class="card">
+  <div class="card-header"><h3><i class="fa fa-clock-rotate-left"></i> Consent History</h3></div>
+  <div class="card-body" style="padding:0">
+    {% if history %}
+    <table class="table">
+      <thead><tr><th>Request #</th><th>Decision</th><th>Date</th></tr></thead>
+      <tbody>
+        {% for log in history %}
+        <tr>
+          <td>#{{ log.request_id }}</td>
+          <td><span class="pill pill-{{ log.decision }}"><i class="fa fa-{% if log.decision == 'approved' %}check{% else %}xmark{% endif %}"></i> {{ log.decision.title() }}</span></td>
+          <td class="text-muted" style="font-size:.82rem;">{{ log.decided_at.strftime('%d %b %Y, %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><i class="fa fa-inbox fa-2x text-muted"></i><p class="text-muted mt-1">No consent history yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

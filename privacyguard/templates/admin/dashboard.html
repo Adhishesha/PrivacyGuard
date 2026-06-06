@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — PrivacyGuard{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h2><i class="fa fa-user-shield"></i> Admin Dashboard</h2>
+    <p class="text-muted">Full system overview — manage users, scan requests, consent, and audit logs.</p>
+  </div>
+  <div class="flex-row gap-1">
+    <a href="{{ url_for('admin.scan_requests') }}" class="btn btn-primary btn-sm">
+      <i class="fa fa-lock-open"></i> Scan Requests
+      {% if stats.scan_reqs > 0 %}<span style="background:#fff2;border-radius:99px;padding:.1rem .45rem;font-size:.75rem;margin-left:.2rem">{{ stats.scan_reqs }}</span>{% endif %}
+    </a>
+    <a href="{{ url_for('admin.audit') }}" class="btn btn-outline btn-sm"><i class="fa fa-scroll"></i> Audit</a>
+  </div>
+</div>
+
+<!-- What admin does — info banner -->
+<div class="admin-info-banner mb-2">
+  <div class="admin-info-title"><i class="fa fa-circle-info"></i> What does Admin do?</div>
+  <div class="admin-info-grid">
+    <div class="admin-info-item"><i class="fa fa-users" style="color:var(--accent)"></i><div><strong>Manage Users</strong><p>View, delete student and faculty accounts</p></div></div>
+    <div class="admin-info-item"><i class="fa fa-lock-open" style="color:var(--accent2)"></i><div><strong>View Scan Data</strong><p>Decrypt &amp; review encrypted scan fields when student requests</p></div></div>
+    <div class="admin-info-item"><i class="fa fa-file-lines" style="color:var(--warning)"></i><div><strong>Oversee Requests</strong><p>Monitor all data sharing requests between faculty &amp; students</p></div></div>
+    <div class="admin-info-item"><i class="fa fa-scroll" style="color:var(--success)"></i><div><strong>Audit Log</strong><p>Full trail of every access and consent decision</p></div></div>
+  </div>
+</div>
+
+<div class="stats-row mb-2">
+  <div class="stat-card"><i class="fa fa-user-graduate stat-icon" style="color:var(--info)"></i><div><div class="stat-val">{{ stats.students }}</div><div class="stat-label">Students</div></div></div>
+  <div class="stat-card"><i class="fa fa-users stat-icon" style="color:var(--accent)"></i><div><div class="stat-val">{{ stats.users }}</div><div class="stat-label">All Users</div></div></div>
+  <div class="stat-card"><i class="fa fa-camera stat-icon" style="color:var(--accent2)"></i><div><div class="stat-val">{{ stats.total_scans }}</div><div class="stat-label">Total Scans</div></div></div>
+  <div class="stat-card"><i class="fa fa-clock stat-icon" style="color:var(--warning)"></i><div><div class="stat-val">{{ stats.scan_reqs }}</div><div class="stat-label">Pending Scan Reqs</div></div></div>
+  <div class="stat-card"><i class="fa fa-check-circle stat-icon" style="color:var(--success)"></i><div><div class="stat-val">{{ stats.approved }}</div><div class="stat-label">Approved</div></div></div>
+  <div class="stat-card"><i class="fa fa-circle-xmark stat-icon" style="color:var(--danger)"></i><div><div class="stat-val">{{ stats.denied }}</div><div class="stat-label">Denied</div></div></div>
+</div>
+
+<!-- Pending Scan Requests -->
+{% if scan_requests %}
+<div class="card mb-2">
+  <div class="card-header">
+    <h3><i class="fa fa-lock-open" style="color:var(--accent2)"></i> Pending Scan View Requests</h3>
+    <span class="badge-count">{{ scan_requests|length }}</span>
+  </div>
+  <div class="card-body" style="padding:0">
+    <table class="table">
+      <thead><tr><th>Student</th><th>File</th><th>Purpose</th><th>Requested</th><th>Action</th></tr></thead>
+      <tbody>
+        {% for sr in scan_requests %}
+        <tr>
+          <td><strong>{{ sr.student.name }}</strong></td>
+          <td style="font-size:.85rem;">{{ sr.scan.filename[:30] }}</td>
+          <td style="font-size:.85rem;">{{ sr.purpose or '—' }}</td>
+          <td class="text-muted" style="font-size:.82rem;">{{ sr.requested_at.strftime('%d %b, %H:%M') }}</td>
+          <td>
+            <a href="{{ url_for('admin.view_scan', sreq_id=sr.id) }}" class="btn btn-sm btn-primary">
+              <i class="fa fa-eye"></i> Review
+            </a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+
+<!-- Recent Access Log -->
+<div class="card">
+  <div class="card-header">
+    <h3><i class="fa fa-scroll"></i> Recent Access Log</h3>
+    <a href="{{ url_for('admin.audit') }}" class="btn btn-sm btn-outline">View All</a>
+  </div>
+  <div class="card-body" style="padding:0">
+    {% if recent_logs %}
+    <table class="table">
+      <thead><tr><th>Request #</th><th>Accessed By</th><th>Action</th><th>Time</th></tr></thead>
+      <tbody>
+        {% for log in recent_logs %}
+        <tr>
+          <td>#{{ log.request_id }}</td>
+          <td>{{ log.accessed_by_user.username }}</td>
+          <td>{{ log.action }}</td>
+          <td class="text-muted" style="font-size:.82rem;">{{ log.accessed_at.strftime('%d %b %Y, %H:%M') }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><i class="fa fa-inbox fa-2x text-muted"></i><p class="text-muted mt-1">No access logs yet.</p></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
